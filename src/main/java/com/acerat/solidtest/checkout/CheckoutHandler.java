@@ -72,10 +72,6 @@ public class CheckoutHandler {
         return customer.getShippingAddress();
     }
 
-    private CheckoutState noCheckoutState() {
-        return new CheckoutState(null);
-    }
-
     private boolean isCheckoutState(CheckoutState checkoutState, Order order, Customer customer) {
         // Make sure we don't charge customer twice
         if (!checkoutState.isPaid()) {
@@ -137,5 +133,8 @@ public class CheckoutHandler {
                 shipmentAddress.getCity() == null || shipmentAddress.getCity().isEmpty();
     }
 
+    private CheckoutState noCheckoutState() {
+        return new CheckoutState(null);
+    }
 
 }
