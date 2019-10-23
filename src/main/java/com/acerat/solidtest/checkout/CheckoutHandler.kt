@@ -22,17 +22,15 @@ class CheckoutHandler {
         val order = checkoutState.order
         val customer = getCustomer(order)
 
-        if (isValidShippingInformation(checkoutState, customer!!)) return checkoutState
-        //TODO Add logic
-        if (checkoutState.getReverseItemsRelease(order)) return checkoutState
+        return when {
+            isValidShippingInformation(checkoutState, customer!!) -> checkoutState
+            //TODO Add logic
+            checkoutState.getReverseItemsRelease(order) -> checkoutState
+            chargeCustomer(checkoutState, order, customer) -> checkoutState
+            // Send reserved items
+            else -> if (checkoutState.sendReservedItems(order)) checkoutState else checkoutState
+        }
 
-        if (isCheckoutState(checkoutState, order, customer)) return checkoutState
-        // Send reserved items
-        return if (checkoutState.sendReservedItems(order)) checkoutState else checkoutState
-    }
-
-    private fun noCheckoutState(): CheckoutState {
-        return CheckoutState(null)
     }
 
     private fun getCustomer(order: Order): Customer? {
@@ -67,7 +65,7 @@ class CheckoutHandler {
     }
 
 
-    private fun isCheckoutState(checkoutState: CheckoutState, order: Order, customer: Customer): Boolean {
+    private fun chargeCustomer(checkoutState: CheckoutState, order: Order, customer: Customer): Boolean {
         // Make sure we don't charge customer twice
         when {
             !checkoutState.isPaid -> // If the customer is set up to pay by card use the card payment service
@@ -87,13 +85,12 @@ class CheckoutHandler {
                         }
                     customer.configuration!!.paymentMenthod == CustomerPaymentMethod.INVOICE -> {
                         // Send invoice to customer
-                        val invoiceAddress = customer.invoiceAddress
                         when {
-                            invoiceAddress == null -> {
+                            customer.invoiceAddress == null -> {
                                 checkoutState.failedToInvoiceCustomer(InvoiceFailures.MISSING_INVOICE_ADDRESS)
                                 return false
                             }
-                            addressEmptyOrNull(invoiceAddress) -> {
+                            addressEmptyOrNull(customer.invoiceAddress) -> {
                                 checkoutState.failedToInvoiceCustomer(InvoiceFailures.INVALID_CUSTOMER_ADDRESS)
                                 return false
                             }
@@ -109,11 +106,9 @@ class CheckoutHandler {
         var currentCardDetails = Optional.empty<CardDetails>()
         // Decrypt card details for our customer
         val cardDetailsList = decryptCustomerCard(customer)
-        for (cardDetails in cardDetailsList) {
-            if (cardDetails.expiresAt.isAfter(LocalDate.now())) {
-                currentCardDetails = Optional.of(cardDetails)
-                break
-            }
+        for (cardDetails in cardDetailsList) if (cardDetails.expiresAt.isAfter(LocalDate.now())) {
+            currentCardDetails = Optional.of(cardDetails)
+            break
         }
         return currentCardDetails
     }
@@ -131,7 +126,6 @@ class CheckoutHandler {
                 shipmentAddress.zipCode == null || shipmentAddress.zipCode!!.isEmpty() ||
                 shipmentAddress.city == null || shipmentAddress.city!!.isEmpty()
     }
-
     companion object {
         private val SHIPMENT_TRACKER = ShipmentTracker(ApplicationConfiguration.getConnectionString())
         private val CARD_PAYMENT_SERVICE = CardPaymentService(ApplicationConfiguration.getCardPaymentConfiguration())
