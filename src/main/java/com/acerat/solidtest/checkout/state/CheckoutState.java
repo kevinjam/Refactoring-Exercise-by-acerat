@@ -91,7 +91,7 @@ public class CheckoutState {
             }
         }
         warehouseReservationSucceeded();
-        return false;
+        return true;
     }
 
     private Product getProductStoreById(OrderLine orderLine) {
