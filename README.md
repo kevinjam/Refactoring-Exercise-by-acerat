@@ -5,3 +5,5 @@
 >Move sendReservedItems and getReverseItemsRelease inside CheckoutState to be clean
 
 [Java Branch](https://github.com/kevinjam/Refactoring-Exercise-by-acerat/tree/master)
+### Feel Free
+Todo more Refactor
