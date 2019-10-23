@@ -58,38 +58,43 @@ public class CheckoutState {
 
     public boolean sendReservedItems(Order order) {
         for (OrderLine orderLine : order.getOrderLines()) {
-            Product product = PRODUCT_STORE.getById(orderLine.getProductId());
-            if (product == null) {
+            Product product = getProductStoreById(orderLine);
+            if (product != null) {
+                if (!product.isStoredInWarehouse())
+                    continue;
+                if (!WAREHOUSE.activateShipment(orderLine.getUniqueOrderLineReference())) {
+                    shipmentActivationFailed(WarehouseSendFailures.COULD_NOT_ACTIVATE_SHIPMENT);
+                    return false;
+                }
+            } else {
                 shipmentActivationFailed(WarehouseSendFailures.PRODUCT_NOT_FOUND);
-            }
-            if (!product.isStoredInWarehouse())
-                continue;
-            if (!WAREHOUSE.activateShipment(orderLine.getUniqueOrderLineReference())) {
-                shipmentActivationFailed(WarehouseSendFailures.COULD_NOT_ACTIVATE_SHIPMENT);
-                return true;
+                return false;
             }
         }
         shipmentActivated();
-        return false;
+        return true;
     }
 
     public boolean getReverseItemsRelease(Order order) {
         // Make sure we reserve items in stock in case they have been released
         for (OrderLine orderLine : order.getOrderLines()) {
-            Product product = PRODUCT_STORE.getById(orderLine.getProductId());
-            if (product == null) {
+            if (getProductStoreById(orderLine) == null) {
                 warehouseReservationFailed(WarehouseReservationFailures.PRODUCT_NOT_FOUND);
             }
-            if (!product.isStoredInWarehouse())
+            if (!getProductStoreById(orderLine).isStoredInWarehouse())
                 continue;
             if (!WAREHOUSE.isReservedInStock(orderLine.getUniqueOrderLineReference(), orderLine.getQty())) {
                 if (!WAREHOUSE.tryReserveItems(orderLine.getUniqueOrderLineReference(), orderLine.getQty())) {
                     warehouseReservationFailed(WarehouseReservationFailures.COULD_NOT_RESERVE_ITEMS_IN_STOCK);
-                    return true;
+                    return false;
                 }
             }
         }
         warehouseReservationSucceeded();
         return false;
+    }
+
+    private Product getProductStoreById(OrderLine orderLine) {
+        return PRODUCT_STORE.getById(orderLine.getProductId());
     }
 }

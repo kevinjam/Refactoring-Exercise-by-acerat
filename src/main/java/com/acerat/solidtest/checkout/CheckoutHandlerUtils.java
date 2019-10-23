@@ -1,5 +1,4 @@
 package com.acerat.solidtest.checkout;
-
 import com.acerat.solidtest.cardpayments.CardDetails;
 import com.acerat.solidtest.cardpayments.CardPaymentService;
 import com.acerat.solidtest.checkout.state.*;
@@ -21,9 +20,10 @@ import java.util.Optional;
 class CheckoutHandlerUtils {
 
     private static final CustomerRepository CUSTOMER_REPOSITORY =new CustomerRepository(ApplicationConfiguration.getConnectionString());
-private static final ShipmentTracker SHIPMENT_TRACKER = new ShipmentTracker(ApplicationConfiguration.getConnectionString());
-private static final CardPaymentService CARD_PAYMENT_SERVICE =new CardPaymentService(ApplicationConfiguration.getCardPaymentConfiguration());
-private static final InvoiceHandler INVOICE_HANDLER =new InvoiceHandler(ApplicationConfiguration.getConnectionString());
+    private static final ShipmentTracker SHIPMENT_TRACKER = new ShipmentTracker(ApplicationConfiguration.getConnectionString());
+    private static final CardPaymentService CARD_PAYMENT_SERVICE =new CardPaymentService(ApplicationConfiguration.getCardPaymentConfiguration());
+    private static final InvoiceHandler INVOICE_HANDLER =new InvoiceHandler(ApplicationConfiguration.getConnectionString());
+
 
 public Customer getCustomer(Order order) {
         // Get customer
@@ -106,9 +106,11 @@ public Customer getCustomer(Order order) {
     }
 
     private List<CardDetails> decryptCustomerCard(Customer customer) {
-        TrustStore trustStore = new TrustStore(ApplicationConfiguration.getTrustStoreCredentials());
-        byte[] encryptedCardDetails = trustStore.getCardDetailsByCustomerId(customer.getCustomerId());
-        return Encryption.decryptFromSecret(encryptedCardDetails, customer.getCustomerSecret());
+        return Encryption.decryptFromSecret(getCardDetailsByCustomerId(customer), customer.getCustomerSecret());
+    }
+
+    private byte[] getCardDetailsByCustomerId(Customer customer) {
+        return new TrustStore(ApplicationConfiguration.getTrustStoreCredentials()).getCardDetailsByCustomerId(customer.getCustomerId());
     }
 
     private boolean addressEmptyOrNull(Address shipmentAddress) {
